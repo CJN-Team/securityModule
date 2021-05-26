@@ -1,0 +1,55 @@
+<video id="video" width="500" height="500" autoplay style="background-color: grey"></video>
+<canvas hidden id="canvas" width="320" height="240" style="background-color: grey"></canvas>
+<img id="image" src="" width="500" height="500" style="background-color: grey"></img>
+<img hidden id="image64" src="" width="320" height="240" style="background-color: grey"></img>
+
+<script>
+
+var video = document.getElementById('video');
+
+
+var canvas = document.getElementById('canvas');
+var context = canvas.getContext('2d');                                                        
+
+var image = document.getElementById('image');
+var image64 = document.getElementById('image64');
+
+if(navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+    navigator.mediaDevices.getUserMedia({ video: true }).then(function(stream) {
+        video.srcObject = stream;
+        video.play();
+    
+        window.setInterval(function() {
+            context.drawImage(video, 0, 0, 320, 240); 
+            image64.src = canvas.toDataURL();  
+            canvas.toBlob(upload, "image/jpeg");
+        }, 1000);    
+    });
+}
+
+
+function upload(file) {
+
+    var formdata =  new FormData();
+    
+    formdata.append("snap", file);
+    
+    var xhr = new XMLHttpRequest();
+    xhr.open("POST", "{{ url_for('upload') }}", true);
+    xhr.responseType = 'blob';   
+    xhr.onload = function() {
+        
+        if(this.status = 200) {
+        } else {
+            console.error(xhr);
+        }
+        
+        image.src = URL.createObjectURL(this.response);
+    };
+    
+    xhr.send(formdata);
+    
+}
+
+    
+</script>
