@@ -36,7 +36,7 @@ def upload():
             imgEmotions = predictionImage.emotionDetection(copy.deepcopy(img))
             imgObjects = predictionImage.objectDetection(copy.deepcopy(img))
             imgFaces = predictionImage.facialDetection(copy.deepcopy(img))
-            imgBehavior = predictionImage.behaviorDetection(copy.deepcopy(img))
+            imgBehavior = copy.deepcopy(img) #predictionImage.behaviorDetection(copy.deepcopy(img))
 
             cv2.resize(imgEmotions, (480, 480),interpolation=cv2.INTER_CUBIC)
             cv2.resize(imgObjects, (480, 480),interpolation=cv2.INTER_CUBIC)
