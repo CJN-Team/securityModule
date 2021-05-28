@@ -136,13 +136,18 @@ class Prediction:
             matchIndex = np.argmin(faceDis)
 
             if faceDis[matchIndex] < 0.50:
-
+            
                 name = self.classNames[matchIndex].upper()
                 name = name.split('_')[0]
-                self.studentName = name
+                if name == "NICOLAS RAIGOSA":
+                    self.studentName = name
+                else:
+                    self.reportFaces.append(["Otra persona: "+ name ,self.timeConversion(self.frames/3)])
 
             else:
                 name = 'Unknown'
+                self.reportFaces.append([name ,self.timeConversion(self.frames/3)])
+
 
             y1,x2,y2,x1 = faceLoc
             y1, x2, y2, x1 = y1,x2,y2,x1
