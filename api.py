@@ -5,8 +5,6 @@ import cv2
 import base64
 import glob
 
-
-
 from Prediction import Prediction
 
 app = Flask(__name__)
@@ -29,14 +27,13 @@ def upload():
     if request.method == 'POST':
         fs = request.files.get('snap')
         if fs:
-
             img = cv2.imdecode(np.frombuffer(
                 fs.read(), np.uint8), cv2.IMREAD_UNCHANGED)
 
             imgEmotions = predictionImage.emotionDetection(copy.deepcopy(img))
             imgObjects = predictionImage.objectDetection(copy.deepcopy(img))
             imgFaces = predictionImage.facialDetection(copy.deepcopy(img))
-            imgBehavior = predictionImage.behaviorDetection(copy.deepcopy(img))
+            imgBehavior = copy.deepcopy(img)#predictionImage.behaviorDetection(copy.deepcopy(img))
 
             cv2.resize(imgEmotions, (480, 480),interpolation=cv2.INTER_CUBIC)
             cv2.resize(imgObjects, (480, 480),interpolation=cv2.INTER_CUBIC)
@@ -52,14 +49,10 @@ def upload():
             imgBehavior = np.array(imgBehavior)
             imgBehavior = imgBehavior.astype('uint8')
 
-            vid1 = cv2.hconcat(
-                [imgEmotions,imgObjects ])
-            vid2 = cv2.hconcat(
-                [imgFaces,imgBehavior ])
-
+            vid1 = cv2.hconcat([imgEmotions,imgObjects ])
+            vid2 = cv2.hconcat([imgFaces,imgBehavior ])
             
             frame = cv2.vconcat([vid1, vid2])
-            
 
             cv2.resize(frame, (1280, 720))
 
@@ -69,7 +62,6 @@ def upload():
             _, imgObjectsEncoded = cv2.imencode('.jpg', imgObjects)
             _, imgFacesEncoded = cv2.imencode('.jpg', imgFaces)
             _, imgBehaviorEncoded = cv2.imencode('.jpg', imgBehavior)
-
             
             predictionImage.frames+=1
 
@@ -81,7 +73,7 @@ def upload():
         else:
             if (released == False):
                 makeVideo()
-            
+                
             return 'App stopped'
 
     return 'Hello World!'
@@ -92,19 +84,15 @@ def makeVideo():
     height, width, _ = frames[0].shape
     size = (width,height)
     
-    
     out = cv2.VideoWriter('project.avi',cv2.VideoWriter_fourcc(*'DIVX'), 3, size)
     
     for i in range(len(frames)):
         out.write(frames[i])
     out.release()
-
     
     predictionImage.makeReport()
     frames=[]
     predictionImage.frames=0
-
-
 
     cv2.destroyAllWindows()
     
