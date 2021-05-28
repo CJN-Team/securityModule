@@ -18,7 +18,7 @@ import face_recognition
 class Prediction:
 
     def __init__(self):
-        self.loadJsonModel('models/emotions/fer.json')
+        self.loadJsonModels()
         self.initCV2()
         self.emotions = ['anger', 'disgust', 'fear',
                          'happiness', 'neutral', 'sadness', 'surprise']
@@ -30,9 +30,11 @@ class Prediction:
         self.reportFaces = []
         self.reportBehavior = []
         self.previousEmotion = ["", 0, 0.0]
+        self.previousObjects = [[],[],[]]
         self.classNames = self.encodeNames()
         self.encodeListKnown = self.encodeFaces()
         self.frames = 0
+        self.objectFrames = 0
         self.studentName = ""
         self.frame_processed = 0
         self.score_thresh = 0.7
@@ -42,28 +44,23 @@ class Prediction:
         self.frozen_graph_path = "hand_inference_graph/frozen_inference_graph.pb"
         self.object_refresh_timeout = 3
         self.seen_object_list = {}
+       
         self.detection_graph, self.sess, self.category_index = detector_utils.load_inference_graph(self.num_classes, self.frozen_graph_path, self.label_path)
         self.sess = tf.compat.v1.Session(graph=self.detection_graph)
-        
 
-
-        
-
-    def loadJsonModel(self, route):
-
-        json_file = open(route, 'r')
+    def loadJsonModels(self):
+        #Emotion model
+        json_file = open('models/emotions/fer.json', 'r')
         loaded_model_json = json_file.read()
         json_file.close()
         self.emotionsModel = model_from_json(loaded_model_json)
         self.emotionsModel.load_weights('models/emotions/fer.h5')
-
+        #Object detection model
         json_file = open('models/objects/examanager.json', 'r')
         loaded_model_json = json_file.read()
         json_file.close()
-
         self.objectModel = model_from_json(loaded_model_json)
-        self.objectModel.load_weights(
-            'models/objects/yolov3-examanager_weights.tf')
+        self.objectModel.load_weights('models/objects/yolov3-examanager_weights.tf')
 
     def initCV2(self):
         self.face_haar_cascade = cv2.CascadeClassifier(
@@ -113,19 +110,13 @@ class Prediction:
             max_output_size_per_class=20,
             iou_threshold=0.5,
             confidence_threshold=0.3)
-
         imagobj = np.squeeze(img_pixels)
         img = self.draw_outputs(imagobj, boxes, scores,
                                 classes, nums, self.names)
         return img
 
     def facialDetection(self, img):
-        # imgS = cv2.resize(img,(0,0),None,0.25,0.25)
         imgS = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-
-        # faces_detected = self.face_haar_cascade.detectMultiScale(imgS, scaleFactor=1.05,
-        #                                                          minNeighbors=5, minSize=(30, 30),
-        #                                                          flags=cv2.CASCADE_SCALE_IMAGE)
         facesCurFrame = face_recognition.face_locations(imgS)
         encodesCurFrame = face_recognition.face_encodings(imgS)
 
@@ -206,14 +197,17 @@ class Prediction:
     def draw_outputs(self, img, boxes, objectness, classes, nums, class_names):
         boxes, objectness, classes, nums = boxes[0], objectness[0], classes[0], nums[0]
         boxes = np.array(boxes)
+        detections = []
         for i in range(nums):
             x1y1 = tuple(
                 (boxes[i, 0:2] * [img.shape[1], img.shape[0]]).astype(np.int32))
             x2y2 = tuple(
                 (boxes[i, 2:4] * [img.shape[1], img.shape[0]]).astype(np.int32))
+            detectedName = class_names[int(classes[i])]
+            detections.append(detectedName)
             img = cv2.rectangle(img, (x1y1), (x2y2), (0, 255, 0), 2)
-            img = cv2.putText(img, '{} {:.4f}'.format(class_names[int(
-                classes[i])], objectness[i]), (x1y1), cv2.FONT_HERSHEY_SIMPLEX, 0.30, (255, 255, 255), 1)
+            img = cv2.putText(img, '{} {:.4f}'.format(detectedName, objectness[i]), (x1y1), cv2.FONT_HERSHEY_SIMPLEX, 0.30, (255, 255, 255), 1)
+        self.flagCreationObjects(detections)
         return img
 
     def non_max_suppression(self, inputs, model_size, max_output_size,
@@ -249,6 +243,24 @@ class Prediction:
                 self.previousEmotion[0] = predicted_emotion
                 self.previousEmotion[1] = 1
                 self.previousEmotion[2] = 0
+
+    def flagCreationObjects(self, detections):
+        for detection in detections:
+            if detection == "mobile phone":
+                if detection in self.previousObjects[0]:
+                    if detection in self.previousObjects[1]:
+                        if detection in self.previousObjects[2]:
+                            self.reportObjects.append(["Mobile phone in frame", self.timeConversion(self.frames/3)])
+            if detections.count("person") >= 2:
+                if self.previousObjects[0].count("person") >= 2:
+                    if self.previousObjects[1].count("person") >= 2:
+                        if self.previousObjects[2].count("person") >= 2:
+                            self.reportObjects.append(["Multiple people in frame", self.timeConversion(self.frames/3)])
+
+        self.previousObjects[2] = self.previousObjects[1]
+        self.previousObjects[1] = self.previousObjects[0]
+        self.previousObjects[0] = detections
+        
 
     def timeConversion(self, time):
 
