@@ -1,7 +1,12 @@
 <video id="video" width="500" height="500" autoplay style="background-color: grey"></video>
 <canvas hidden id="canvas" width="320" height="240" style="background-color: grey"></canvas>
 <img id="image" src="" width="500" height="500" style="background-color: grey"></img>
+<img id="image2" src="" width="500" height="500" style="background-color: grey"></img>
+<img id="image3" src="" width="500" height="500" style="background-color: grey"></img>
+<img id="image4" src="" width="500" height="500" style="background-color: grey"></img>
 <img hidden id="image64" src="" width="320" height="240" style="background-color: grey"></img>
+
+<button id="recordButton" src="" onclick='recording()' style="background-color: grey">Start recording</button>
 
 <script>
 
@@ -12,42 +17,76 @@ var canvas = document.getElementById('canvas');
 var context = canvas.getContext('2d');                                                        
 
 var image = document.getElementById('image');
+var image2 = document.getElementById('image2');
+var image3 = document.getElementById('image3');
+var image4 = document.getElementById('image4');
+
 var image64 = document.getElementById('image64');
 
-if(navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-    navigator.mediaDevices.getUserMedia({ video: true }).then(function(stream) {
+var record= false;
+
+
+
+
+function recording(){
+    this.record=!this.record;
+
+    if(navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        navigator.mediaDevices.getUserMedia({ video: true }).then(function(stream) {
         video.srcObject = stream;
-        video.play();
-    
-        window.setInterval(function() {
-            context.drawImage(video, 0, 0, 320, 240); 
-            image64.src = canvas.toDataURL();  
-            canvas.toBlob(upload, "image/jpeg");
-        }, 1000);    
-    });
+            if(this.record){
+                    document.getElementById("recordButton").innerText="Stop Recording";
+                    video.play();
+                    window.setInterval(function() {
+                            context.drawImage(video, 0, 0, 320, 240); 
+                            image64.src = canvas.toDataURL();  
+                            canvas.toBlob(upload, "image/jpeg");
+                        }, 1000);     
+                }
+                else{
+                    document.getElementById("recordButton").innerText="Start Recording";
+                    video.stop();
+                    window.stop();
+                }
+        });
+    }
 }
-
-
 function upload(file) {
 
-    var formdata =  new FormData();
+    if(this.record){
+        var formdata =  new FormData();
     
-    formdata.append("snap", file);
-    
-    var xhr = new XMLHttpRequest();
-    xhr.open("POST", "{{ url_for('upload') }}", true);
-    xhr.responseType = 'blob';   
-    xhr.onload = function() {
+        formdata.append("snap", file);
         
-        if(this.status = 200) {
-        } else {
-            console.error(xhr);
-        }
+        var xhr = new XMLHttpRequest();
+        xhr.open("POST", "{{ url_for('upload') }}", true);
+        xhr.responseType = 'json';   
+        xhr.onload = function() {
+            
+            if(this.status = 200) {
+            } else {
+                console.error(xhr);
+            }
+            
+            console.log(this.response['img'])
+            image.src ="data:image/jpg;base64,"+this.response['img'];
+            image2.src ="data:image/jpg;base64,"+this.response['img2'];
+            image3.src ="data:image/jpg;base64,"+this.response['img3'];
+            image4.src ="data:image/jpg;base64,"+this.response['img4'];
+        };
         
-        image.src = URL.createObjectURL(this.response);
-    };
+        xhr.send(formdata);
+    }else{
+        var formdata =  new FormData();
     
-    xhr.send(formdata);
+        formdata.append("snap", "fin");
+        
+        var xhr = new XMLHttpRequest();
+        xhr.open("POST", "{{ url_for('upload') }}", true);
+        
+        xhr.send(formdata);
+    }
+    
     
 }
 

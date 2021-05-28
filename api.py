@@ -1,7 +1,9 @@
 from flask import Flask, jsonify, render_template, Response,  make_response,request
-import datetime
+import copy
 import numpy as np
 import cv2
+import base64
+
 
 from Prediction import Prediction
 
@@ -13,20 +15,6 @@ predictionImage = Prediction()
 def index():
     return render_template('index.html')
 
-@app.route('/api/vid/<string:route>', methods=['GET'])
-def videoAnalsis(route):
-    predictionVideo = Prediction()
-    predictionVideo.videoPrediction(route)
-    return "holaa"
-
-
-
-@app.route('/api/img/<string:route>', methods=['GET'])
-def imageAnalsis(route):
-    predictionImage = Prediction()
-    predictionImage.imagePrediction(route, None, 0)
-    return "hola"
-
 
 @app.route('/api/live', methods=['GET'])
 def liveAnalsis():
@@ -34,44 +22,32 @@ def liveAnalsis():
     predictionLive.liveCamPredict()
     return "hola"
 
-
-@app.route('/api/summary', methods=['GET'])
-def summary():
-    predictionSummary = Prediction()
-    predictionSummary.showAccuracy()
-    
-
-@app.route('/api/graphic', methods=['GET'])
-def graphic():
-    predictionGraphic = Prediction()
-    return predictionGraphic.trainingGraphics()
-
-def send_file_data(data, mimetype='image/jpeg', filename='output.jpg'):
-    
-    response = make_response(data)
-    response.headers.set('Content-Type', mimetype)
-    response.headers.set('Content-Disposition', 'attachment', filename=filename)
-    
-    return response
     
 @app.route('/upload', methods=['GET', 'POST'])
 def upload():
     if request.method == 'POST':
         fs = request.files.get('snap')
-        if fs:
+        print(fs)
+        if fs :
 
             img = cv2.imdecode(np.frombuffer(fs.read(), np.uint8), cv2.IMREAD_UNCHANGED)
+        
+            imgEmotions= predictionImage.emotionDetection(copy.deepcopy(img))
+            imgObjects=  predictionImage.objectDetection(copy.deepcopy(img))
+            imgFaces=   predictionImage.facialDetection(copy.deepcopy(img))
+            imgBehavior= predictionImage.behaviorDetection(copy.deepcopy(img))
 
-            img=predictionImage.imagePrediction("", img, 0)
-            
-            text = datetime.datetime.now().strftime('%Y.%m.%d %H.%M.%S.%f')
-            img = cv2.putText(img, text, (5, 15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA) 
+            _,imgEmotionsEncoded=cv2.imencode('.jpg', imgEmotions)
+            _,imgObjectsEncoded=cv2.imencode('.jpg', imgObjects)
+            _,imgFacesEncoded=cv2.imencode('.jpg', imgFaces)
+            _,imgBehaviorEncoded=cv2.imencode('.jpg', imgBehavior)
 
-            ret, buf = cv2.imencode('.jpg', img)
+            buf = jsonify({'img': base64.b64encode(imgEmotionsEncoded).decode('ascii'),'img2': base64.b64encode(imgObjectsEncoded).decode('ascii'),'img3': base64.b64encode(imgFacesEncoded).decode('ascii'),'img4': base64.b64encode(imgBehaviorEncoded).decode('ascii')})
             
-            return send_file_data(buf.tobytes())
+            return buf
         else:
-            return 'You forgot Snap!'
+            print("holi")
+            return 'App stopped'
     
     return 'Hello World!'
 
