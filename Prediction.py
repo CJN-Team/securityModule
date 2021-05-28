@@ -28,6 +28,11 @@ class Prediction:
         self.classNames = self.loadNames()
         self.encodeListKnown = self.encode()
 
+        
+
+
+        
+
     def loadJsonModel(self, route):
 
         json_file = open(route, 'r')
