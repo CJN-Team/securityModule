@@ -32,10 +32,8 @@ class Prediction:
         self.previousEmotion = ["", 0, 0.0]
         self.classNames = self.loadNames()
         self.encodeListKnown = self.encode()
-<<<<<<< HEAD
         self.frames = 0
         self.studentName = ""
-=======
         self.frame_processed = 0
         self.score_thresh = 0.7
         self.num_hands_detect = 10
@@ -48,7 +46,6 @@ class Prediction:
 
 
         
->>>>>>> 01632d599bbec3b5ab1f5ad11fce4197ed8fafb6
 
     def loadJsonModel(self, route):
 
@@ -153,10 +150,6 @@ class Prediction:
                         cv2.FONT_HERSHEY_COMPLEX, 1, (255, 255, 255), 2)
         return img
 
-<<<<<<< HEAD
-    def behaviorDetection(self, img):
-        return img
-=======
     def behaviorDetection(self,frame):
         
       
@@ -179,7 +172,6 @@ class Prediction:
 
         return frame
         #return img
->>>>>>> 01632d599bbec3b5ab1f5ad11fce4197ed8fafb6
 
     def loadNames(self):
         path = 'dataset'
