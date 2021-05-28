@@ -37,6 +37,8 @@ class Prediction:
         self.frozen_graph_path = "hand_inference_graph/frozen_inference_graph.pb"
         self.object_refresh_timeout = 3
         self.seen_object_list = {}
+        self.detection_graph, self.sess, self.category_index = detector_utils.load_inference_graph(self.num_classes, self.frozen_graph_path, self.label_path)
+        self.sess = tf.compat.v1.Session(graph=self.detection_graph)
         
 
 
@@ -197,11 +199,10 @@ class Prediction:
       
         cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
-        detection_graph, sess, category_index = detector_utils.load_inference_graph(self.num_classes, self.frozen_graph_path, self.label_path)
-        sess = tf.compat.v1.Session(graph=detection_graph)
-        boxes, scores, classes = detector_utils.detect_objects(frame, detection_graph, sess)
+        
+        boxes, scores, classes = detector_utils.detect_objects(frame, self.detection_graph, self.sess)
             
-        tags = detector_utils.get_tags(classes, category_index, self.num_hands_detect, self.score_thresh, scores, boxes, frame)
+        tags = detector_utils.get_tags(classes, self.category_index, self.num_hands_detect, self.score_thresh, scores, boxes, frame)
             
         if (len(tags) > 0):
             id_utils.get_id(tags, self.seen_object_list)
@@ -211,9 +212,9 @@ class Prediction:
             
         cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
 
-
+        
         return frame
-        #return img
+        
 
     def loadNames(self):
         path = 'dataset'
