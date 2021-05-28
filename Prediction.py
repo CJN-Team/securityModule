@@ -23,15 +23,15 @@ class Prediction:
         self.names = ['mobile phone', 'person']
         with open('models/emotions/modelParams.txt') as json_file:
             self.data = json.load(json_file)
-        self.report = []
-        self.previous = ["", 0, 0.0]
+        self.reportEmotions = []
+        self.reportObjects = []
+        self.reportFaces = []
+        self.reportBehavior = []
+        self.previousEmotion = ["", 0, 0.0]
         self.classNames = self.loadNames()
         self.encodeListKnown = self.encode()
-
-        
-
-
-        
+        self.frames = 0
+        self.studentName = ""
 
     def loadJsonModel(self, route):
 
@@ -46,79 +46,21 @@ class Prediction:
         json_file.close()
 
         self.objectModel = model_from_json(loaded_model_json)
-        self.objectModel.load_weights('models/objects/yolov3-examanager_weights.tf')
+        self.objectModel.load_weights(
+            'models/objects/yolov3-examanager_weights.tf')
 
     def initCV2(self):
         self.face_haar_cascade = cv2.CascadeClassifier(
             cv2.data.haarcascades + "haarcascade_frontalface_default.xml")
         self.cap = cv2.VideoCapture(0)
 
-    def liveCamPredict(self, img):
-        cap = cv2.VideoCapture(0)
-
-        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-        out = cv2.VideoWriter('output.mp4', fourcc, 20.0, (640, 480))
-        frames = 0
-        fps = cap.get(cv2.CAP_PROP_FPS)
-        while(cap.isOpened()):
-
-            ret, img = cap.read()
-
-            if ret == True:
-                gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-                faces_detected = self.face_haar_cascade.detectMultiScale(gray_img, scaleFactor=1.05,
-                                                                         minNeighbors=5, minSize=(30, 30),
-                                                                         flags=cv2.CASCADE_SCALE_IMAGE)
-
-                for (x, y, w, h) in faces_detected:
-
-                    cv2.rectangle(img, (x, y), (x + w, y + h),
-                                  (0, 255, 0), thickness=2)
-                    roi_gray = gray_img[y:y + w, x:x + h]
-                    roi_gray = cv2.resize(roi_gray, (48, 48))
-                    img_pixels = image.img_to_array(roi_gray)
-                    img_pixels = np.expand_dims(img_pixels, axis=0)
-                    img_pixels /= 255.0
-
-                    predictions = self.emotionsModel.predict(img_pixels)
-                    max_index = int(np.argmax(predictions))
-
-                    predicted_emotion = self.emotions[max_index]
-
-                    cv2.putText(img, predicted_emotion + " "+str(predictions[0][max_index]), (int(x), int(y)),
-                                cv2.FONT_HERSHEY_SIMPLEX, 0.75, (255, 255, 255), 2)
-                    resized_img = cv2.resize(img, (1000, 700))
-                    #cv2.imshow('Facial Emotion Recognition', resized_img)
-
-                    self.flagCreation(predictions, max_index,
-                                      predicted_emotion, frames)
-
-                out.write(img)
-
-                if cv2.waitKey(1) & 0xFF == ord('q'):
-                    break
-            else:
-                break
-
-            if(len(self.report) > 0):
-                if(isinstance(self.report[-1][2], int)):
-                    self.report[-1][2] = self.timeConversion(
-                        (self.report[-1][2]/fps))
-            frames += 1
-        self.makeReport()
-        cap.release()
-        out.release()
-        cv2.destroyAllWindows()
-
-
-
-    def emotionDetection(self,img):
+    def emotionDetection(self, img):
         gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         faces_detected = self.face_haar_cascade.detectMultiScale(gray_img, scaleFactor=1.05,
                                                                  minNeighbors=5, minSize=(30, 30),
                                                                  flags=cv2.CASCADE_SCALE_IMAGE)
         for (x, y, w, h) in faces_detected:
-            
+
             cv2.rectangle(img, (x, y), (x + w, y + h), (0, 255, 0), 2)
             roi_gray = gray_img[y:y + w, x:x + h]
             roi_gray = cv2.resize(roi_gray, (48, 48))
@@ -134,57 +76,68 @@ class Prediction:
             cv2.putText(img, predicted_emotion + " "+str(predictions[0][max_index]), (int(x), int(y)),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.30, (255, 255, 255), 1)
             resized_img = cv2.resize(img, (1000, 700))
-            self.flagCreation(predictions, max_index,
-                              predicted_emotion, 0)
+            self.flagCreationEmotions(predictions, max_index,
+                                      predicted_emotion, self.frames)
+        if(len(self.reportEmotions) > 0):
+            if(isinstance(self.reportEmotions[-1][2], int)):
+                self.reportEmotions[-1][2] = self.timeConversion(
+                    (self.reportEmotions[-1][2]/3))
+        return img
 
-        return img 
-
-    def objectDetection(self,img):
+    def objectDetection(self, img):
         img_pixels = image.img_to_array(img)
         img_pixels = np.expand_dims(img_pixels, axis=0)
 
         objectPrediction = self.objectModel.predict(
             tf.image.resize(img_pixels, [416, 416]))
 
-        boxes, scores, classes, nums = self.output_boxes( \
-            objectPrediction, (413,413,3),
+        boxes, scores, classes, nums = self.output_boxes(
+            objectPrediction, (413, 413, 3),
             max_output_size=40,
             max_output_size_per_class=20,
             iou_threshold=0.5,
             confidence_threshold=0.3)
 
         imagobj = np.squeeze(img_pixels)
-        img = self.draw_outputs(imagobj, boxes, scores, classes, nums, self.names)
-        return img 
+        img = self.draw_outputs(imagobj, boxes, scores,
+                                classes, nums, self.names)
+        return img
 
-    def facialDetection(self,img):
-        imgS = cv2.resize(img,(0,0),None,0.25,0.25)
-        imgS = cv2.cvtColor(imgS, cv2.COLOR_BGR2RGB)
-    
-        facesCurFrame = face_recognition.face_locations(imgS)
-        encodesCurFrame = face_recognition.face_encodings(imgS,facesCurFrame)
-        
-        for encodeFace,faceLoc in zip(encodesCurFrame,facesCurFrame):
-            matches = face_recognition.compare_faces(self.encodeListKnown,encodeFace)
-            faceDis = face_recognition.face_distance(self.encodeListKnown,encodeFace)
+    def facialDetection(self, img):
+        #imgS = cv2.resize(img,(0,0),None,0.25,0.25)
+        imgS = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+
+        faces_detected = self.face_haar_cascade.detectMultiScale(imgS, scaleFactor=1.05,
+                                                                 minNeighbors=5, minSize=(30, 30),
+                                                                 flags=cv2.CASCADE_SCALE_IMAGE)
+        #facesCurFrame = face_recognition.face_locations(imgS)
+        encodesCurFrame = face_recognition.face_encodings(imgS, faces_detected)
+
+        for encodeFace, faceLoc in zip(encodesCurFrame, faces_detected):
+            matches = face_recognition.compare_faces(
+                self.encodeListKnown, encodeFace)
+            faceDis = face_recognition.face_distance(
+                self.encodeListKnown, encodeFace)
             matchIndex = np.argmin(faceDis)
-        
-            if faceDis[matchIndex]< 0.50:
-                
+
+            if faceDis[matchIndex] < 0.50:
+
                 name = self.classNames[matchIndex].upper()
                 name = name.split('_')[0]
+                self.studentName = name
 
-            else: name = 'Unknown'
-            y1,x2,y2,x1 = faceLoc
-            y1, x2, y2, x1 = y1*4,x2*4,y2*4,x1*4
-            cv2.rectangle(img,(x1,y1),(x2,y2),(0,255,0),2)
-            cv2.rectangle(img,(x1,y2-35),(x2,y2),(0,255,0),cv2.FILLED)
-            cv2.putText(img,name,(x1+6,y2-6),cv2.FONT_HERSHEY_COMPLEX,1,(255,255,255),2)
-        return img 
+            else:
+                name = 'Unknown'
+            y1, x2, y2, x1 = faceLoc
+            y1, x2, y2, x1 = y1*4, x2*4, y2*4, x1*4
+            cv2.rectangle(img, (x1, y1), (x2, y2), (0, 255, 0), 2)
+            cv2.rectangle(img, (x1, y2-35), (x2, y2), (0, 255, 0), cv2.FILLED)
+            cv2.putText(img, name, (x1+6, y2-6),
+                        cv2.FONT_HERSHEY_COMPLEX, 1, (255, 255, 255), 2)
+        return img
 
-
-    def behaviorDetection(self,img):
-        return img 
+    def behaviorDetection(self, img):
+        return img
 
     def loadNames(self):
         path = 'dataset'
@@ -204,7 +157,7 @@ class Prediction:
             encodeListKnown = pickle.load(f)
         return encodeListKnown
 
-    def output_boxes(self,inputs, model_size, max_output_size, max_output_size_per_class,
+    def output_boxes(self, inputs, model_size, max_output_size, max_output_size_per_class,
                      iou_threshold, confidence_threshold):
         center_x, center_y, width, height, confidence, classes = tf.split(
             inputs, [1, 1, 1, 1, 1, -1], axis=-1)
@@ -215,10 +168,10 @@ class Prediction:
         inputs = tf.concat([top_left_x, top_left_y, bottom_right_x,
                             bottom_right_y, confidence, classes], axis=-1)
         boxes_dicts = self.non_max_suppression(inputs, model_size, max_output_size,
-                                          max_output_size_per_class, iou_threshold, confidence_threshold)
+                                               max_output_size_per_class, iou_threshold, confidence_threshold)
         return boxes_dicts
 
-    def draw_outputs(self,img, boxes, objectness, classes, nums, class_names):
+    def draw_outputs(self, img, boxes, objectness, classes, nums, class_names):
         boxes, objectness, classes, nums = boxes[0], objectness[0], classes[0], nums[0]
         boxes = np.array(boxes)
         for i in range(nums):
@@ -231,7 +184,7 @@ class Prediction:
                 classes[i])], objectness[i]), (x1y1), cv2.FONT_HERSHEY_SIMPLEX, 0.30, (255, 255, 255), 1)
         return img
 
-    def non_max_suppression(self,inputs, model_size, max_output_size,
+    def non_max_suppression(self, inputs, model_size, max_output_size,
                             max_output_size_per_class, iou_threshold,
                             confidence_threshold):
         bbox, confs, class_probs = tf.split(inputs, [4, 1, -1], axis=-1)
@@ -241,7 +194,7 @@ class Prediction:
             tf.image.combined_non_max_suppression(
                 boxes=tf.reshape(bbox, (tf.shape(bbox)[0], -1, 1, 4)),
                 scores=tf.reshape(scores, (tf.shape(scores)[0], -1,
-                                        tf.shape(scores)[-1])),
+                                           tf.shape(scores)[-1])),
                 max_output_size_per_class=max_output_size_per_class,
                 max_total_size=max_output_size,
                 iou_threshold=iou_threshold,
@@ -249,28 +202,26 @@ class Prediction:
             )
         return boxes, scores, classes, valid_detections
 
-    def flagCreation(self, predictions, max_index, predicted_emotion, frames):
+    def flagCreationEmotions(self, predictions, max_index, predicted_emotion, frames):
         if(predictions[0][max_index] > 0.50):
 
-            print(self.previous)
-            if(self.previous[0] == predicted_emotion):
-                self.previous[1] += 1
-                if(self.previous[2] == 0):
-                    self.previous[2] = frames
+            if(self.previousEmotion[0] == predicted_emotion):
+                self.previousEmotion[1] += 1
+                if(self.previousEmotion[2] == 0):
+                    self.previousEmotion[2] = frames
             else:
-                if(self.previous[1] > 3 and (self.previous[0] == "fear" or self.previous[0] == "happiness")):
-                    self.report.append(
-                        [self.previous[0], self.previous[1], self.previous[2]])
+                if(self.previousEmotion[1] > 3 and (self.previousEmotion[0] == "fear" or self.previousEmotion[0] == "happiness")):
+                    self.reportEmotions.append(
+                        [self.previousEmotion[0], self.previousEmotion[1], self.previousEmotion[2]])
 
-                self.previous[0] = predicted_emotion
-                self.previous[1] = 1
-                self.previous[2] = 0
+                self.previousEmotion[0] = predicted_emotion
+                self.previousEmotion[1] = 1
+                self.previousEmotion[2] = 0
 
     def timeConversion(self, time):
 
         time = format_timespan(time)
 
-        print(time)
         return time
 
     def cleaningCV2(self):
@@ -279,12 +230,16 @@ class Prediction:
 
     def makeReport(self):
         data = {}
-        data['studentName'] = []
-        data['studentName'].append({
-            'flags': self.report
+        data[self.studentName] = []
+        data[self.studentName].append({
+            'flagsEmotions': self.reportEmotions,
+            'flagsObjects': self.reportObjects,
+            'flagsFaces': self.reportFaces,
+            'flagsBehavior': self.reportBehavior
         })
-        with open('report.txt', 'w') as outfile:
+
+        with open(f'report_{self.studentName}.txt', 'w') as outfile:
             json.dump(data, outfile)
 
-        self.report = []
-        self.previous = ["", 0, 0.0]
+        self.reportEmotions = []
+        self.previousEmotion = ["", 0, 0.0]

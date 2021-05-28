@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, render_template, Response,  make_response, request
+from flask import Flask, jsonify, render_template, Response,  make_response, request,redirect,url_for
 import copy
 import numpy as np
 import cv2
@@ -18,15 +18,8 @@ frames=[]
 
 @app.route('/')
 def index():
-    
+    predictionImage = Prediction()
     return render_template('index.html')
-
-
-@app.route('/api/live', methods=['GET'])
-def liveAnalsis():
-    predictionLive = Prediction()
-    predictionLive.liveCamPredict()
-    return "hola"
 
 
 @app.route('/upload', methods=['GET', 'POST'])
@@ -35,7 +28,6 @@ def upload():
 
     if request.method == 'POST':
         fs = request.files.get('snap')
-        print(fs)
         if fs:
 
             img = cv2.imdecode(np.frombuffer(
@@ -79,8 +71,7 @@ def upload():
             _, imgBehaviorEncoded = cv2.imencode('.jpg', imgBehavior)
 
             
-            print(img.shape)
-
+            predictionImage.frames+=1
 
             buf = jsonify({'img': base64.b64encode(imgEmotionsEncoded).decode('ascii'), 'img2': base64.b64encode(imgObjectsEncoded).decode(
                 'ascii'), 'img3': base64.b64encode(imgFacesEncoded).decode('ascii'), 'img4': base64.b64encode(imgBehaviorEncoded).decode('ascii')})
@@ -90,8 +81,6 @@ def upload():
         else:
             if (released == False):
                 makeVideo()
-                released=True
-
             
             return 'App stopped'
 
@@ -110,10 +99,14 @@ def makeVideo():
         out.write(frames[i])
     out.release()
 
+    
+    predictionImage.makeReport()
+    frames=[]
+    predictionImage.frames=0
+
+
 
     cv2.destroyAllWindows()
-    
-
     
 
 

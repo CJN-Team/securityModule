@@ -24,13 +24,14 @@ var image4 = document.getElementById('image4');
 var image64 = document.getElementById('image64');
 
 var record= false;
-
-
+var ended = false;
 
 
 function recording(){
     this.record=!this.record;
-
+    if(ended){
+        this.ended=!this.ended;
+    }
     if(navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
         navigator.mediaDevices.getUserMedia({ video: true }).then(function(stream) {
         video.srcObject = stream;
@@ -68,7 +69,6 @@ function upload(file) {
                 console.error(xhr);
             }
             
-            console.log(this.response['img'])
             image.src ="data:image/jpg;base64,"+this.response['img'];
             image2.src ="data:image/jpg;base64,"+this.response['img2'];
             image3.src ="data:image/jpg;base64,"+this.response['img3'];
@@ -76,7 +76,7 @@ function upload(file) {
         };
         
         xhr.send(formdata);
-    }else{
+    }else if(!this.ended){
         var formdata =  new FormData();
     
         formdata.append("snap", "fin");
@@ -85,6 +85,9 @@ function upload(file) {
         xhr.open("POST", "{{ url_for('upload') }}", true);
         
         xhr.send(formdata);
+        this.ended=true;
+
+        window.location.reload();
     }
     
     
