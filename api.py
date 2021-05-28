@@ -5,7 +5,10 @@ import cv2
 import base64
 import glob
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> 94f61fc79a87a90803caf48a79a6deb3f8fc099a
 from Prediction import Prediction
 
 app = Flask(__name__,static_folder='static')
@@ -41,19 +44,27 @@ def upload():
     if request.method == 'POST':
         fs = request.files.get('snap')
         if fs:
-
             img = cv2.imdecode(np.frombuffer(
                 fs.read(), np.uint8), cv2.IMREAD_UNCHANGED)
 
             imgEmotions = predictionImage.emotionDetection(copy.deepcopy(img))
             imgObjects = predictionImage.objectDetection(copy.deepcopy(img))
             imgFaces = predictionImage.facialDetection(copy.deepcopy(img))
+<<<<<<< HEAD
             #imgBehavior = predictionImage.behaviorDetection(copy.deepcopy(img))
             imgBehavior = copy.deepcopy(img)
             cv2.resize(imgEmotions, (480, 480), interpolation=cv2.INTER_CUBIC)
             cv2.resize(imgObjects, (480, 480), interpolation=cv2.INTER_CUBIC)
             cv2.resize(imgFaces, (480, 480), interpolation=cv2.INTER_CUBIC)
             cv2.resize(imgBehavior, (480, 480), interpolation=cv2.INTER_CUBIC)
+=======
+            imgBehavior = copy.deepcopy(img)#predictionImage.behaviorDetection(copy.deepcopy(img))
+
+            cv2.resize(imgEmotions, (480, 480),interpolation=cv2.INTER_CUBIC)
+            cv2.resize(imgObjects, (480, 480),interpolation=cv2.INTER_CUBIC)
+            cv2.resize(imgFaces, (480, 480),interpolation=cv2.INTER_CUBIC)
+            cv2.resize(imgBehavior, (480, 480),interpolation=cv2.INTER_CUBIC)
+>>>>>>> 94f61fc79a87a90803caf48a79a6deb3f8fc099a
 
             imgEmotions = np.array(imgEmotions)
             imgEmotions = imgEmotions.astype('uint8')
@@ -64,11 +75,17 @@ def upload():
             imgBehavior = np.array(imgBehavior)
             imgBehavior = imgBehavior.astype('uint8')
 
+<<<<<<< HEAD
             vid1 = cv2.hconcat(
                 [imgEmotions, imgObjects])
             vid2 = cv2.hconcat(
                 [imgFaces, imgBehavior])
 
+=======
+            vid1 = cv2.hconcat([imgEmotions,imgObjects ])
+            vid2 = cv2.hconcat([imgFaces,imgBehavior ])
+            
+>>>>>>> 94f61fc79a87a90803caf48a79a6deb3f8fc099a
             frame = cv2.vconcat([vid1, vid2])
 
             cv2.resize(frame, (1280, 720))
@@ -79,8 +96,13 @@ def upload():
             _, imgObjectsEncoded = cv2.imencode('.jpg', imgObjects)
             _, imgFacesEncoded = cv2.imencode('.jpg', imgFaces)
             _, imgBehaviorEncoded = cv2.imencode('.jpg', imgBehavior)
+<<<<<<< HEAD
 
             predictionImage.frames += 1
+=======
+            
+            predictionImage.frames+=1
+>>>>>>> 94f61fc79a87a90803caf48a79a6deb3f8fc099a
 
             buf = jsonify({'img': base64.b64encode(imgEmotionsEncoded).decode('ascii'), 'img2': base64.b64encode(imgObjectsEncoded).decode(
                 'ascii'), 'img3': base64.b64encode(imgFacesEncoded).decode('ascii'), 'img4': base64.b64encode(imgBehaviorEncoded).decode('ascii')})
@@ -90,7 +112,11 @@ def upload():
         else:
             if (released == False):
                 makeVideo()
+<<<<<<< HEAD
 
+=======
+                
+>>>>>>> 94f61fc79a87a90803caf48a79a6deb3f8fc099a
             return 'App stopped'
 
     return 'Hello World!'
@@ -100,6 +126,7 @@ def makeVideo():
     global frames
 
     height, width, _ = frames[0].shape
+<<<<<<< HEAD
     size = (width, height)
 
     out = cv2.VideoWriter(
@@ -112,6 +139,19 @@ def makeVideo():
     predictionImage.makeReport()
     frames = []
     predictionImage.frames = 0
+=======
+    size = (width,height)
+    
+    out = cv2.VideoWriter('project.avi',cv2.VideoWriter_fourcc(*'DIVX'), 3, size)
+    
+    for i in range(len(frames)):
+        out.write(frames[i])
+    out.release()
+    
+    predictionImage.makeReport()
+    frames=[]
+    predictionImage.frames=0
+>>>>>>> 94f61fc79a87a90803caf48a79a6deb3f8fc099a
 
     cv2.destroyAllWindows()
 
