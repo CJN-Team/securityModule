@@ -31,8 +31,8 @@ class Prediction:
         self.reportBehavior = []
         self.previousEmotion = ["", 0, 0.0]
         self.previousObjects = [[],[],[]]
-        self.classNames = self.loadNames()
-        self.encodeListKnown = self.encode()
+        self.classNames = self.encodeNames()
+        self.encodeListKnown = self.encodeFaces()
         self.frames = 0
         self.objectFrames = 0
         self.studentName = ""
@@ -44,6 +44,9 @@ class Prediction:
         self.frozen_graph_path = "hand_inference_graph/frozen_inference_graph.pb"
         self.object_refresh_timeout = 3
         self.seen_object_list = {}
+       
+        self.detection_graph, self.sess, self.category_index = detector_utils.load_inference_graph(self.num_classes, self.frozen_graph_path, self.label_path)
+        self.sess = tf.compat.v1.Session(graph=self.detection_graph)
 
     def loadJsonModels(self):
         #Emotion model
@@ -113,36 +116,36 @@ class Prediction:
         return img
 
     def facialDetection(self, img):
-        #imgS = cv2.resize(img,(0,0),None,0.25,0.25)
         imgS = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        facesCurFrame = face_recognition.face_locations(imgS)
+        encodesCurFrame = face_recognition.face_encodings(imgS)
 
-        faces_detected = self.face_haar_cascade.detectMultiScale(imgS, scaleFactor=1.05,
-                                                                 minNeighbors=5, minSize=(30, 30),
-                                                                 flags=cv2.CASCADE_SCALE_IMAGE)
-        #facesCurFrame = face_recognition.face_locations(imgS)
-        encodesCurFrame = face_recognition.face_encodings(imgS, faces_detected)
+        for encodeFace, faceLoc in zip(encodesCurFrame, facesCurFrame):
 
-        for encodeFace, faceLoc in zip(encodesCurFrame, faces_detected):
-            matches = face_recognition.compare_faces(
-                self.encodeListKnown, encodeFace)
-            faceDis = face_recognition.face_distance(
-                self.encodeListKnown, encodeFace)
+            faceDis = face_recognition.face_distance(self.encodeListKnown, encodeFace)
+
             matchIndex = np.argmin(faceDis)
 
             if faceDis[matchIndex] < 0.50:
-
+            
                 name = self.classNames[matchIndex].upper()
                 name = name.split('_')[0]
-                self.studentName = name
+                if name == "NICOLAS RAIGOSA":
+                    self.studentName = name
+                else:
+                    self.reportFaces.append(["Otra persona: "+ name ,self.timeConversion(self.frames/3)])
 
             else:
                 name = 'Unknown'
-            y1, x2, y2, x1 = faceLoc
-            y1, x2, y2, x1 = y1*4, x2*4, y2*4, x1*4
-            cv2.rectangle(img, (x1, y1), (x2, y2), (0, 255, 0), 2)
-            cv2.rectangle(img, (x1, y2-35), (x2, y2), (0, 255, 0), cv2.FILLED)
-            cv2.putText(img, name, (x1+6, y2-6),
-                        cv2.FONT_HERSHEY_COMPLEX, 1, (255, 255, 255), 2)
+                self.reportFaces.append([name ,self.timeConversion(self.frames/3)])
+
+
+            y1,x2,y2,x1 = faceLoc
+            y1, x2, y2, x1 = y1,x2,y2,x1
+            cv2.rectangle(img,(x1,y1),(x2,y2),(0,255,0),2)
+            cv2.rectangle(img,(x1,y2),(x2,y2),(0,255,0),cv2.FILLED)
+            cv2.putText(img,name,(x1,y2),cv2.FONT_HERSHEY_COMPLEX,0.5,(255,255,255),1)
+            
         return img
 
     def behaviorDetection(self,frame):
@@ -150,11 +153,10 @@ class Prediction:
       
         cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
-        detection_graph, sess, category_index = detector_utils.load_inference_graph(self.num_classes, self.frozen_graph_path, self.label_path)
-        sess = tf.compat.v1.Session(graph=detection_graph)
-        boxes, scores, classes = detector_utils.detect_objects(frame, detection_graph, sess)
+        
+        boxes, scores, classes = detector_utils.detect_objects(frame, self.detection_graph, self.sess)
             
-        tags = detector_utils.get_tags(classes, category_index, self.num_hands_detect, self.score_thresh, scores, boxes, frame)
+        tags = detector_utils.get_tags(classes, self.category_index, self.num_hands_detect, self.score_thresh, scores, boxes, frame)
             
         if (len(tags) > 0):
             id_utils.get_id(tags, self.seen_object_list)
@@ -164,27 +166,19 @@ class Prediction:
             
         cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
 
-
+        
         return frame
-        #return img
+        
 
-    def loadNames(self):
-        path = 'dataset'
-        images = []
-        classNames = []
-        myList = os.listdir(path)
-
-        for cl in myList:
-            curImg = cv2.imread(f'{path}/{cl}')
-            images.append(curImg)
-            classNames.append(os.path.splitext(cl)[0])
-
-        return classNames
-
-    def encode(self):
+    def encodeFaces(self):
         with open('dataset_faces.dat', 'rb') as f:
             encodeListKnown = pickle.load(f)
         return encodeListKnown
+
+    def encodeNames(self):
+        with open('dataset_names.dat', 'rb') as f:
+            encodeClassNames = pickle.load(f)
+        return encodeClassNames
 
     def output_boxes(self, inputs, model_size, max_output_size, max_output_size_per_class,
                      iou_threshold, confidence_threshold):
