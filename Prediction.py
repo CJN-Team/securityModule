@@ -1,4 +1,6 @@
 import cv2
+from utils import detector_utils as detector_utils
+from utils import object_id_utils as id_utils
 from tensorflow.keras.preprocessing import image
 from tensorflow.keras.models import model_from_json
 import json
@@ -27,7 +29,14 @@ class Prediction:
         self.previous = ["", 0, 0.0]
         self.classNames = self.loadNames()
         self.encodeListKnown = self.encode()
-
+        self.frame_processed = 0
+        self.score_thresh = 0.7
+        self.num_hands_detect = 10
+        self.num_classes = 1
+        self.label_path = "hand_inference_graph/hand_label_map.pbtxt"
+        self.frozen_graph_path = "hand_inference_graph/frozen_inference_graph.pb"
+        self.object_refresh_timeout = 3
+        self.seen_object_list = {}
         
 
 
@@ -183,8 +192,28 @@ class Prediction:
         return img 
 
 
-    def behaviorDetection(self,img):
-        return img 
+    def behaviorDetection(self,frame):
+        
+      
+        cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+        detection_graph, sess, category_index = detector_utils.load_inference_graph(self.num_classes, self.frozen_graph_path, self.label_path)
+        sess = tf.compat.v1.Session(graph=detection_graph)
+        boxes, scores, classes = detector_utils.detect_objects(frame, detection_graph, sess)
+            
+        tags = detector_utils.get_tags(classes, category_index, self.num_hands_detect, self.score_thresh, scores, boxes, frame)
+            
+        if (len(tags) > 0):
+            id_utils.get_id(tags, self.seen_object_list)
+  
+        id_utils.refresh_seen_object_list(self.seen_object_list, self.object_refresh_timeout)
+        detector_utils.draw_box_on_image_id(tags, frame) 
+            
+        cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+
+
+        return frame
+        #return img
 
     def loadNames(self):
         path = 'dataset'
