@@ -1,13 +1,58 @@
-<video id="video" width="500" height="500" autoplay style="background-color: grey"></video>
-<canvas hidden id="canvas" width="320" height="240" style="background-color: grey"></canvas>
-<img id="image" src="" width="500" height="500" style="background-color: grey"></img>
-<img id="image2" src="" width="500" height="500" style="background-color: grey"></img>
-<img id="image3" src="" width="500" height="500" style="background-color: grey"></img>
-<img id="image4" src="" width="500" height="500" style="background-color: grey"></img>
-<img hidden id="image64" src="" width="320" height="240" style="background-color: grey"></img>
-
-<button id="recordButton" src="" onclick='recording()' style="background-color: grey">Start recording</button>
-
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Examanager Analysis</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.css') }}">
+  </head>
+  <body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container-fluid">
+          <a class="navbar-brand" href="#" style="position: absolute;">Examanager Analysis&trade;</a>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarColor01" aria-controls="navbarColor01" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+          </button>
+            <ul class="navbar-nav mr-auto ml-auto">
+                <li class="nav-item">
+                    <div class="align-items-center">
+                        <a class="nav-link active" href="{{url_for('index')}}">Home</a>
+                    </div>
+                </li>
+                <li class="nav-item">
+                    <div class="align-items-center">
+                        <a class="nav-link" href="{{url_for('videos')}}">Videos</a>
+                    </div>
+                </li>
+                <li class="nav-item">
+                    <div class="align-items-center">
+                        <a class="nav-link" href="{{url_for('reports')}}">Reports</a>
+                    </div>
+                </li>
+            </ul>
+        </div>
+      </nav>
+    <header>
+        <div class="container">
+            <div class="d-flex justify-content-center mt-1">
+                <video id="video" width="500" height="500" autoplay style="background-color: grey"></video><br />
+            </div>
+            <div class="d-flex justify-content-center mt-1">
+                <button class="btn btn-primary" id="recordButton" src="" onclick='recording()'>Start recording</button><br />
+            </div>
+        </div>
+        <div class="d-flex justify-content-center mt-1">
+            <canvas hidden id="canvas" width="320" height="240" style="background-color: grey"></canvas>
+            <img id="image" src="" width="500" height="500" style="background-color: grey"></img>
+            <img id="image2" src="" width="500" height="500" style="background-color: grey"></img>
+            <img id="image3" src="" width="500" height="500" style="background-color: grey"></img>
+            <img id="image4" src="" width="500" height="500" style="background-color: grey"></img>
+            <img hidden id="image64" src="" width="320" height="240" style="background-color: grey"></img>
+        </div>
+    </header>
+    <div class="container">
+      {% block content %}
+      {% endblock %}
+    </div>
+  </body>
 <script>
 
 var video = document.getElementById('video');
@@ -95,3 +140,4 @@ function upload(file) {
 
     
 </script>
+</html>

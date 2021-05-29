@@ -4,7 +4,8 @@ import numpy as np
 import cv2
 import base64
 import glob
-
+import os
+from datetime import datetime
 from Prediction import Prediction
 
 app = Flask(__name__,static_folder='static')
@@ -20,23 +21,29 @@ def index():
     predictionImage = Prediction()
     return render_template('index.html')
 
-@app.route("/download/<path>")
-def download (path = None):
-    if path is None:    
+@app.route('/videos')
+def videos():
+    for current_dir, dirs, files in os.walk('static/videos/'):
+        print(files)
+
+    return render_template('videos.html', videos=files)
+
+@app.route('/reports')
+def reports():
+    for current_dir, dirs, files in os.walk('static/reports/'):
+        print(files)
+    return render_template('reports.html', reports=files)
+
+@app.route("/download/<string:folder>/<string:subfolder>/<string:file>", methods=['GET'])
+def download (folder = None, subfolder = None, file= None):
+    route = [folder,subfolder,file]
+    print("PATH! ", '/'.join(route))
+    if None in route:    
         return "Elemento no encontrado"
     try:
-        return send_file(path, as_attachment=True)
+        return send_file('/'.join(route), as_attachment=True)
     except Exception as e:
         return render_template('index.html')
-
-
-
-
-@app.route('/video')
-def lastVideo():
-
-    return render_template('video.html')
-
 
 @app.route('/upload', methods=['GET', 'POST'])
 def upload():
@@ -103,7 +110,7 @@ def makeVideo():
     height, width, _ = frames[0].shape
     size = (width,height)
     
-    out = cv2.VideoWriter('static/project.avi',cv2.VideoWriter_fourcc(*'DIVX'), 3, size)
+    out = cv2.VideoWriter("static/videos/project_"+str(datetime.now().strftime("%m-%d-%Y-%H-%M-%S"))+".avi",cv2.VideoWriter_fourcc(*'DIVX'), 3, size)
     
     for i in range(len(frames)):
         out.write(frames[i])
