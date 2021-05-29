@@ -133,11 +133,11 @@ class Prediction:
                 if name == "NICOLAS RAIGOSA":
                     self.studentName = name
                 else:
-                    self.reportFaces.append(["Otra persona: "+ name ,self.timeConversion(self.frames/3)])
+                    self.storeFlag("Otra persona: "+ name, self.reportFaces)
 
             else:
                 name = 'Unknown'
-                self.reportFaces.append([name ,self.timeConversion(self.frames/3)])
+                self.storeFlag(name, self.reportFaces)
 
 
             y1,x2,y2,x1 = faceLoc
@@ -250,17 +250,29 @@ class Prediction:
                 if detection in self.previousObjects[0]:
                     if detection in self.previousObjects[1]:
                         if detection in self.previousObjects[2]:
-                            self.reportObjects.append(["Mobile phone in frame", self.timeConversion(self.frames/3)])
+                            self.storeFlag("Mobile phone in frame", self.reportObjects)
             if detections.count("person") >= 2:
                 if self.previousObjects[0].count("person") >= 2:
                     if self.previousObjects[1].count("person") >= 2:
                         if self.previousObjects[2].count("person") >= 2:
-                            self.reportObjects.append(["Multiple people in frame", self.timeConversion(self.frames/3)])
+                            self.storeFlag("Multiple people in frame", self.reportObjects)
 
         self.previousObjects[2] = self.previousObjects[1]
         self.previousObjects[1] = self.previousObjects[0]
         self.previousObjects[0] = detections
-        
+
+    def storeFlag(self, flag, report):
+        currentTime = self.timeConversion(self.frames/3)
+        currentTimeSeconds = float(currentTime.split(' ')[0])
+        if len(report) > 1:
+            previousMessage = report[-1][0]
+            previousTimeSeconds = float(report[-1][1].split(' ')[0])
+            if previousMessage == flag and currentTimeSeconds - previousTimeSeconds > 3.0:
+                report.append([flag, currentTime])
+            elif previousMessage != flag:
+                report.append([flag, currentTime])
+        else:
+            report.append([flag, currentTime])
 
     def timeConversion(self, time):
 
@@ -282,8 +294,12 @@ class Prediction:
             'flagsBehavior': self.reportBehavior
         })
 
-        with open(f'report_{self.studentName}.txt', 'w') as outfile:
-            json.dump(data, outfile)
+        with open(f'report_{self.studentName}.json', 'w') as outfile:
+            json.dump(data, outfile, indent=2)
 
         self.reportEmotions = []
+        self.reportBehavior = []
+        self.reportObjects = []
+        self.reportFaces = []
         self.previousEmotion = ["", 0, 0.0]
+        self.previousObjects = [[],[],[]]
