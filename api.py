@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, render_template, Response,  make_response, request, redirect, url_for
+from flask import Flask, jsonify, render_template, Response,  make_response, request, redirect, url_for,send_file
 import copy
 import numpy as np
 import cv2
@@ -20,11 +20,16 @@ def index():
     predictionImage = Prediction()
     return render_template('index.html')
 
+@app.route("/download/<path>")
+def download (path = None):
+    if path is None:    
+        return "Elemento no encontrado"
+    try:
+        return send_file(path, as_attachment=True)
+    except Exception as e:
+        return render_template('index.html')
 
-@app.route('/report')
-def lastReport():
 
-    return render_template('index.html', title="page", jsonfile=json.dumps(data))
 
 
 @app.route('/video')
