@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, render_template, Response,  make_response, request,redirect,url_for
+from flask import Flask, jsonify, render_template, Response,  make_response, request, redirect, url_for
 import copy
 import numpy as np
 import cv2
@@ -7,12 +7,13 @@ import glob
 
 from Prediction import Prediction
 
-app = Flask(__name__)
+app = Flask(__name__,static_folder='static')
 predictionImage = Prediction()
 
 released = False
 
-frames=[]
+frames = []
+
 
 @app.route('/')
 def index():
@@ -20,9 +21,21 @@ def index():
     return render_template('index.html')
 
 
+@app.route('/report')
+def lastReport():
+
+    return render_template('index.html', title="page", jsonfile=json.dumps(data))
+
+
+@app.route('/video')
+def lastVideo():
+
+    return render_template('video.html')
+
+
 @app.route('/upload', methods=['GET', 'POST'])
 def upload():
-    global released,frames
+    global released, frames
 
     if request.method == 'POST':
         fs = request.files.get('snap')
@@ -68,7 +81,7 @@ def upload():
             buf = jsonify({'img': base64.b64encode(imgEmotionsEncoded).decode('ascii'), 'img2': base64.b64encode(imgObjectsEncoded).decode(
                 'ascii'), 'img3': base64.b64encode(imgFacesEncoded).decode('ascii'), 'img4': base64.b64encode(imgBehaviorEncoded).decode('ascii')})
 
-            released= False
+            released = False
             return buf
         else:
             if (released == False):
@@ -78,13 +91,14 @@ def upload():
 
     return 'Hello World!'
 
+
 def makeVideo():
     global frames
-    
+
     height, width, _ = frames[0].shape
     size = (width,height)
     
-    out = cv2.VideoWriter('project.avi',cv2.VideoWriter_fourcc(*'DIVX'), 3, size)
+    out = cv2.VideoWriter('static/project.avi',cv2.VideoWriter_fourcc(*'DIVX'), 3, size)
     
     for i in range(len(frames)):
         out.write(frames[i])
@@ -95,7 +109,6 @@ def makeVideo():
     predictionImage.frames=0
 
     cv2.destroyAllWindows()
-    
 
 
 if __name__ == "__main__":
