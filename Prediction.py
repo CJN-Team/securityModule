@@ -295,7 +295,7 @@ class Prediction:
             'flagsBehavior': self.reportBehavior
         })
 
-        with open("static/reports/report_"+self.studentName+"_"+str(datetime.now().strftime("%m-%d-%Y-%H-%M-%S"))+".json", 'w') as outfile:
+        with open(f'static/reports/report_{self.studentName}_{str(datetime.now().strftime("%m-%d-%Y-%H-%M-%S"))}.json', 'w') as outfile:
             json.dump(data, outfile, indent=2)
 
         self.reportEmotions = []

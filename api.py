@@ -103,14 +103,13 @@ def upload():
 
     return 'Hello World!'
 
-
 def makeVideo():
     global frames
 
     height, width, _ = frames[0].shape
     size = (width,height)
     
-    out = cv2.VideoWriter("static/videos/project_"+str(datetime.now().strftime("%m-%d-%Y-%H-%M-%S"))+".avi",cv2.VideoWriter_fourcc(*'DIVX'), 3, size)
+    out = cv2.VideoWriter(f'static/videos/project_{str(datetime.now().strftime("%m-%d-%Y-%H-%M-%S"))}.avi',cv2.VideoWriter_fourcc(*'DIVX'), 3, size)
     
     for i in range(len(frames)):
         out.write(frames[i])

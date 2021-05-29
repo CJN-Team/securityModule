@@ -5146,6 +5146,7 @@ input[type="button"].btn-block {
   flex: 1 1 auto;
   min-height: 1px;
   padding: 1.25rem;
+  font-family: Arial, Helvetica, sans-serif;
 }
 
 .card-title {

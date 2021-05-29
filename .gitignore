@@ -144,5 +144,5 @@ cython_debug/
 dataset/
 models/objects/yolov3*
 
-report*
+report*.json
 *.avi
