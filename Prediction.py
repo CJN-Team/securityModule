@@ -151,16 +151,14 @@ class Prediction:
 
     def behaviorDetection(self,frame):
         
-      
-        cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-
-        
+        cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)  
         boxes, scores, classes = detector_utils.detect_objects(frame, self.detection_graph, self.sess)
             
         tags = detector_utils.get_tags(classes, self.category_index, self.num_hands_detect, self.score_thresh, scores, boxes, frame)
             
         if (len(tags) > 0):
-            id_utils.get_id(tags, self.seen_object_list)
+            if(id_utils.get_id(tags, self.seen_object_list)):
+                self.storeFlag("More than one persone: ", self.reportBehavior)
   
         id_utils.refresh_seen_object_list(self.seen_object_list, self.object_refresh_timeout)
         detector_utils.draw_box_on_image_id(tags, frame) 

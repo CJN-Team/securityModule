@@ -92,7 +92,7 @@ def get_largest_key(seen_object_list):
 def get_id(tags, seen_object_list):
     # if we havent seen anything yet, we assign the current boxes and tag as our first reference point
     assigned_group_keys = []  # keep a list of groups that have been assigned .. 0,1,2,33
-   
+    fraud = False
     if (len(seen_object_list) == 0):
         for i in range(len(tags)):
             object_data = {
@@ -111,7 +111,7 @@ def get_id(tags, seen_object_list):
                 print("Adding new group", next_group_index )
 
                 if(next_group_index > 1):
-                    print("Alerta")
+                    fraud = True
                 
                 object_data = {
                     "id": next_group_index, "last_seen_timestamep": datetime.datetime.now(),
@@ -136,6 +136,6 @@ def get_id(tags, seen_object_list):
 
                 assigned_group_keys.append(min_key)
                 tags[i]["id_label"] = item["id"]
-                 
+    return fraud             
  
  
